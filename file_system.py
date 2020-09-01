@@ -23,6 +23,7 @@ def get_steam_installation_folder():
         registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, KEY_NAME, 0, winreg.KEY_READ)
         value, regtype = winreg.QueryValueEx(registry_key, 'InstallPath')
         winreg.closeKey(registry_key)
+        return value
     except WindowsError:
         return ''
 
