@@ -2,11 +2,7 @@ import re
 
 
 class LogParser(object):
-
-    """Docstring for LogParser. """
-
     def __init__(self, log_contents):
-        """TODO: to be defined. """
         self.log_contents = log_contents
 
         self.TIMESTAMP_REGEX = r'^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}: '
@@ -38,23 +34,55 @@ class LogParser(object):
 
         self.round_info_pattern = re.compile(r'^\[Round [0-9]{1} \| (\S+)\]')
 
+        self.round_stat_pattern = re.compile(r'^> ([^:]+): (.+)$')
+
     def parse(self):
         for line in self.log_contents:
             if self.begin_matchmaking_pattern.match(line) is not None:
                 yield self.parse_episode_info()
 
-    def get_episode_round_names(self):
+    def get_round_info(self):
         minigames = []
+        positions = []
 
         for line in self.log_contents:
+            # If we see a timestamp, we're done with end-of-episode info
             if self.timestamp_pattern.match(line):
                 break
 
             round_info_match = self.round_info_pattern.match(line)
             if round_info_match:
                 minigames.append(round_info_match.group(1))
+                qualified = None
 
-        return minigames
+                # Get info about this round
+                just_saw_blank = False
+                for line in self.log_contents:
+                    # If we see two blank lines in a row, we're done with this round
+                    if line == '\n':
+                        if just_saw_blank:
+                            break
+                        just_saw_blank = True
+
+                    elif self.timestamp_pattern.match(line):
+                        break
+
+                    else:
+                        just_saw_blank = False
+
+                        round_stat_match = self.round_stat_pattern.match(line)
+                        if round_stat_match:
+                            stat = round_stat_match.group(1)
+                            if stat == 'Qualified':
+                                qualified = True if round_stat_match.group(2) == 'True' else False
+                            elif stat == 'Position' and qualified:
+                                positions.append(round_stat_match.group(2))
+
+        return {
+            'minigames': minigames,
+            'positions': positions,
+            'victory': len(positions) == len(minigames)
+        }
 
     def parse_episode_info(self):
         num_players = episode_id = None
@@ -87,10 +115,8 @@ class LogParser(object):
                 if num_players:
                     round_qualifiers.append(num_players)
 
-                minigames = self.get_episode_round_names()
-
                 return {
                     'episode_id': episode_id,
-                    'minigames': minigames,
-                    'round_qualifiers': round_qualifiers
+                    'round_qualifiers': round_qualifiers,
+                    **self.get_round_info()
                 }
