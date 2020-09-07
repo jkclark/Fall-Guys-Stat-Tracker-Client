@@ -5,41 +5,67 @@ class LogParser(object):
     def __init__(self, log_contents):
         self.log_contents = log_contents
 
-        self.TIMESTAMP_REGEX = r'^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}: '
-        self.patterns = [
-            r'\[StateMatchmaking] Begin matchmaking',
-            r'\[ClientGameManager\] .+\. ([0-9]+) players in system.',
-            r'\[StateGameInProgress\] Storing ticket for admission to stage [0-9]+ of episode ([a-z0-9\-]+)',
-            r'== \[CompletedEpisodeDto\] ==',
-            r'^\[Round [0-9]{1} \| (\S+)\]'
-        ]
+        self.regexes = {
+            'timestamp': r'^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}: ',
+            'matchmaking': r'\[StateMatchmaking] Begin matchmaking',
+            'num_players': r'\[ClientGameManager\] .+\. ([0-9]+) players in system.',
+            'round_over': r'\[StateGameInProgress\] .+ admission to stage [0-9]+ of episode ([a-z0-9\-]+)',
+            'episode_over': r'== \[CompletedEpisodeDto\] ==',
+            'round_info': r'^\[Round [0-9]{1} \| (\S+)\]',
+            'round_stat': r'^> ([^:]+): (.+)$'
+        }
 
-        self.timestamp_pattern = re.compile(self.TIMESTAMP_REGEX)
+        # These regexes always appear with timestamps at the beginning of the line
+        self.regexes_with_timestamp_prefix = {'matchmaking', 'num_players', 'round_over', 'episode_over'}
 
-        self.begin_matchmaking_pattern = re.compile(
-            self.TIMESTAMP_REGEX + r'\[StateMatchmaking] Begin matchmaking'
-        )
-
-        self.num_players_pattern = re.compile(
-            self.TIMESTAMP_REGEX + r'\[ClientGameManager\] .+\. ([0-9]+) players in system.'
-        )
-
-        self.round_over_pattern = re.compile(
-            self.TIMESTAMP_REGEX + r'\[StateGameInProgress\] Storing ticket for admission to stage [0-9]+ of episode ([a-z0-9\-]+)'
-        )
-
-        self.episode_over_pattern = re.compile(
-            self.TIMESTAMP_REGEX + r'== \[CompletedEpisodeDto\] =='
-        )
-
-        self.round_info_pattern = re.compile(r'^\[Round [0-9]{1} \| (\S+)\]')
-
-        self.round_stat_pattern = re.compile(r'^> ([^:]+): (.+)$')
+        self.patterns = {
+            name: re.compile(regex)
+            if name not in self.regexes_with_timestamp_prefix
+            else re.compile(self.regexes['timestamp'] + regex)
+            for name, regex in self.regexes.items()
+        }
 
     def parse(self):
         for line in self.log_contents:
-            if self.begin_matchmaking_pattern.match(line) is not None:
+            if self.patterns['matchmaking'].match(line) is not None:
                 yield self.parse_episode_info()
+
+    def parse_episode_info(self):
+        num_players = episode_id = None
+        round_qualifiers = []
+
+        for line in self.log_contents:
+            # Try to get a number of qualifying players out of this line
+            match = self.patterns['num_players'].match(line)
+            if match:
+                num_players = int(match.group(1))
+
+                continue
+
+            # Check to see if the round ended
+            match = self.patterns['round_over'].match(line)
+            if match:
+                if not episode_id and match.group(1):
+                    episode_id = match.group(1)
+
+                if num_players is not None:
+                    round_qualifiers.append(num_players)
+
+                num_players = None
+
+                continue
+
+            # Try to get end-of-episode information
+            match = self.patterns['episode_over'].match(line)
+            if match:
+                if num_players:
+                    round_qualifiers.append(num_players)
+
+                return {
+                    'episode_id': episode_id,
+                    'round_qualifiers': round_qualifiers,
+                    **self.get_round_info()
+                }
 
     def get_round_info(self):
         minigames = []
@@ -47,10 +73,10 @@ class LogParser(object):
 
         for line in self.log_contents:
             # If we see a timestamp, we're done with end-of-episode info
-            if self.timestamp_pattern.match(line):
+            if self.patterns['timestamp'].match(line):
                 break
 
-            round_info_match = self.round_info_pattern.match(line)
+            round_info_match = self.patterns['round_info'].match(line)
             if round_info_match:
                 minigames.append(round_info_match.group(1))
                 qualified = None
@@ -64,13 +90,13 @@ class LogParser(object):
                             break
                         just_saw_blank = True
 
-                    elif self.timestamp_pattern.match(line):
+                    elif self.patterns['timestamp'].match(line):
                         break
 
                     else:
                         just_saw_blank = False
 
-                        round_stat_match = self.round_stat_pattern.match(line)
+                        round_stat_match = self.patterns['round_stat'].match(line)
                         if round_stat_match:
                             stat = round_stat_match.group(1)
                             if stat == 'Qualified':
@@ -83,40 +109,3 @@ class LogParser(object):
             'positions': positions,
             'victory': len(positions) == len(minigames)
         }
-
-    def parse_episode_info(self):
-        num_players = episode_id = None
-        round_qualifiers = []
-
-        for line in self.log_contents:
-            # Try to get a number of qualifying players out of this line
-            match = self.num_players_pattern.match(line)
-            if match:
-                num_players = int(match.group(1))
-
-                continue
-
-            # Check to see if the round ended
-            match = self.round_over_pattern.match(line)
-            if match:
-                if not episode_id and match.group(1):
-                    episode_id = match.group(1)
-
-                if num_players is not None:
-                    round_qualifiers.append(num_players)
-
-                num_players = None
-
-                continue
-
-            # Try to get end-of-episode information
-            match = self.episode_over_pattern.match(line)
-            if match:
-                if num_players:
-                    round_qualifiers.append(num_players)
-
-                return {
-                    'episode_id': episode_id,
-                    'round_qualifiers': round_qualifiers,
-                    **self.get_round_info()
-                }
