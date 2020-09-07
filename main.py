@@ -1,7 +1,7 @@
 from json import dumps
 from requests import post
 
-from parse import LogParser
+from parser import LogParser
 from file_system import follow_file, get_fall_guys_log_location, get_steam_id
 
 
