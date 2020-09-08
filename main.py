@@ -11,12 +11,8 @@ def main():
     with open(get_fall_guys_log_location(), 'r') as log_file:
         print('*****')
         for episode in LogParser(follow_file(log_file)).parse():
-            #  for field in episode:
-                #  print(f'{field}: {episode[field]}')
-            #  print('*****')
-
             post(
-                'http://localhost:5000/client/',
+                'http://flask-env-2.eba-mwwfrvk5.us-east-1.elasticbeanstalk.com/client/',
                 data=dumps({'steam_id': STEAM_ID, 'episode_info': episode})
             )
 
