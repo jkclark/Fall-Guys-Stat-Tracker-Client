@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 
 
@@ -6,7 +7,7 @@ class LogParser(object):
         self.log_contents = log_contents
 
         self.regexes = {
-            'timestamp': r'^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}: ',
+            'timestamp': r'^([0-9]{2}:[0-9]{2}:[0-9]{2})\.[0-9]{3}: ',
             'matchmaking': r'\[StateMatchmaking] Begin matchmaking',
             'num_players': r'\[ClientGameManager\] .+\. ([0-9]+) players in system.',
             'round_over': r'\[StateGameInProgress\] .+ admission to stage [0-9]+ of episode ([a-z0-9\-]+)',
@@ -33,20 +34,23 @@ class LogParser(object):
     def parse_episode_info(self):
         num_players = episode_id = None
         round_qualifiers = []
+        round_end_times = []
 
         for line in self.log_contents:
             # Try to get a number of qualifying players out of this line
             match = self.patterns['num_players'].match(line)
             if match:
-                num_players = int(match.group(1))
+                num_players = int(match.group(2))
 
                 continue
 
             # Check to see if the round ended
             match = self.patterns['round_over'].match(line)
             if match:
-                if not episode_id and match.group(1):
-                    episode_id = match.group(1)
+                round_end_times.append(' '.join((datetime.now().strftime('%Y-%m-%d'), match.group(1))))
+
+                if not episode_id and match.group(2):
+                    episode_id = match.group(2)
 
                 if num_players is not None:
                     round_qualifiers.append(num_players)
@@ -61,9 +65,14 @@ class LogParser(object):
                 if num_players:
                     round_qualifiers.append(num_players)
 
+                # If you get eliminated before a round actually ends, append the current date/time
+                if len(round_qualifiers) > len(round_end_times):
+                    round_end_times.append(' '.join((datetime.now().strftime('%Y-%m-%d'), match.group(1))))
+
                 return {
                     'episode_id': episode_id,
                     'round_qualifiers': round_qualifiers,
+                    'round_end_times': round_end_times,
                     **self.get_round_info()
                 }
 
@@ -102,7 +111,7 @@ class LogParser(object):
                             if stat == 'Qualified':
                                 qualified = True if round_stat_match.group(2) == 'True' else False
                             elif stat == 'Position' and qualified:
-                                positions.append(round_stat_match.group(2))
+                                positions.append(int(round_stat_match.group(2)))
 
         return {
             'minigames': minigames,
