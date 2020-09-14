@@ -25,13 +25,13 @@ def _get_steam_install_location():
     return value
 
 
-def get_steam_id():
+def get_steam_user_info():
     with open(os.path.join(_get_steam_install_location(), r'config\loginusers.vdf'), 'r') as logins_file:
         logins = vdf.loads(logins_file.read())
 
     # Return the first user's ID
     for user in logins['users']:
-        return user
+        return user, logins['users'][user]['AccountName']
 
 
 def get_fall_guys_log_location() -> str:
