@@ -38,11 +38,24 @@ def get_fall_guys_log_location() -> str:
     return os.path.join(Path.home(), 'AppData', 'LocalLow', 'Mediatonic', 'FallGuys_client', 'Player.log')
 
 
-def follow_file(f) -> Generator[str, None, None]:
+def follow_file(file_path) -> Generator[str, None, None]:
     while True:
-        line = f.readline()
-        if not line:
-            time.sleep(0.1)
-            continue
+        fp = open(file_path, 'r')
+        prev_file_size = 0
+        while True:
+            line = fp.readline()
+            if not line:
+                # If the file size has shrunk, we need to start reading from the beginning
+                new_file_size = os.path.getsize(get_fall_guys_log_location())
+                if new_file_size < prev_file_size:
+                    break
 
-        yield line
+                # Remember file size
+                prev_file_size = new_file_size
+
+                time.sleep(0.1)
+                continue
+
+            yield line
+
+        fp.close()

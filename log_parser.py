@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 import re
 
 
@@ -29,7 +30,11 @@ class LogParser(object):
     def parse(self):
         for line in self.log_contents:
             if self.patterns['matchmaking'].match(line) is not None:
-                yield self.parse_episode_info()
+                while True:
+                    episode_info = self.parse_episode_info()
+                    if episode_info:
+                        yield episode_info
+                        break
 
     def parse_episode_info(self):
         num_players = episode_id = None
@@ -37,6 +42,11 @@ class LogParser(object):
         round_end_times = []
 
         for line in self.log_contents:
+            # TODO: There is probably a better way to structure restarting the parsing of an episode than
+            #       what we're doing here.
+            if self.patterns['matchmaking'].match(line):
+                return {}
+
             # Try to get a number of qualifying players out of this line
             match = self.patterns['num_players'].match(line)
             if match:
