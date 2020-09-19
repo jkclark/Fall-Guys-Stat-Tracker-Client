@@ -10,19 +10,14 @@ def main():
 
     while True:
         for episode in LogParser(follow_file(get_fall_guys_log_location())).parse():
-            print('****')
-            for x in episode:
-                print(f'{x}: {episode[x]}')
-            print('****')
-            #  post(
-                #  #  'https://flask-env-2.eba-mwwfrvk5.us-east-1.elasticbeanstalk.com/client/',
-                #  'http://localhost:5000/client/',
-                #  data=dumps({
-                    #  'steam_id': STEAM_ID,
-                    #  'steam_account_name': STEAM_ACCOUNT_NAME,
-                    #  'episode_info': episode,
-                #  })
-            #  )
+            post(
+                'https://flask-env-2.eba-mwwfrvk5.us-east-1.elasticbeanstalk.com/client/',
+                data=dumps({
+                    'steam_id': STEAM_ID,
+                    'steam_account_name': STEAM_ACCOUNT_NAME,
+                    'episode_info': episode,
+                })
+            )
 
 
 if __name__ == "__main__":
