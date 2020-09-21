@@ -2,6 +2,8 @@ from json import dumps
 from multiprocessing import Queue
 import pathlib
 from requests import post
+from requests.exceptions import RequestException
+from time import sleep
 
 from log_parser import LogParser
 from file_system import (
@@ -21,15 +23,24 @@ def main():
 
     while True:
         for episode in LogParser(follow_file(get_fall_guys_log_location())).parse():
-            post(
-                # TODO: When we get a non-self-signed cert, use HTTPS
-                'http://flask-env.eba-mwwfrvk5.us-east-1.elasticbeanstalk.com/client',
-                data=dumps({
-                    'steam_id': STEAM_ID,
-                    'steam_account_name': STEAM_ACCOUNT_NAME,
-                    'episode_info': episode,
-                })
-            )
+            while True:
+                try:
+                    # TODO: When we get a non-self-signed cert, use HTTPS
+                    post(
+                        'http://flask-env.eba-mwwfrvk5.us-east-1.elasticbeanstalk.com/client',
+                        data=dumps({
+                            'steam_id': STEAM_ID,
+                            'steam_account_name': STEAM_ACCOUNT_NAME,
+                            'episode_info': episode,
+                        })
+                    )
+
+                    break
+
+                # Don't error if connection issue
+                except RequestException:
+                    sleep(30)
+                    continue
 
 
 if __name__ == "__main__":
