@@ -19,9 +19,10 @@ def _get_steam_install_location():
     else:
         KEY_NAME = r'SOFTWARE\WOW6432Node\Valve\Steam'
 
-    registry_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, KEY_NAME)
-    value, _ = winreg.QueryValueEx(registry_key, 'InstallPath')
-    winreg.CloseKey(registry_key)
+    # TODO: Changed this. Does it still work?
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, KEY_NAME) as registry_key:
+        value, _ = winreg.QueryValueEx(registry_key, 'InstallPath')
+
     return value
 
 
@@ -59,3 +60,17 @@ def follow_file(file_path) -> Generator[str, None, None]:
             yield line
 
         fp.close()
+
+
+def add_path_to_registry_startup_key(path):
+    try:
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r'Software\Microsoft\Windows\CurrentVersion\Run',
+            0,
+            winreg.KEY_ALL_ACCESS
+        ) as registry_key:
+            winreg.SetValueEx(registry_key, 'FGStats_Client', 0, winreg.REG_SZ, path)
+
+    except WindowsError as e:
+        print("Exception:", e)
