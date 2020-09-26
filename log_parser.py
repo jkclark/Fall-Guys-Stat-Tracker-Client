@@ -56,7 +56,7 @@ class LogParser(object):
             # Check to see if the round ended
             match = self.patterns['round_over'].match(line)
             if match:
-                round_end_times.append(' '.join((datetime.now().strftime('%Y-%m-%d'), match.group(1))))
+                round_end_times.append(' '.join((datetime.utcnow().strftime('%Y-%m-%d'), match.group(1))))
 
                 if not episode_id and match.group(2):
                     episode_id = match.group(2)
