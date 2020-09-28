@@ -25,9 +25,8 @@ def main():
         for episode in LogParser(follow_file(get_fall_guys_log_location())).parse():
             while True:
                 try:
-                    # TODO: When we get a non-self-signed cert, use HTTPS
                     post(
-                        'http://flask-env.eba-mwwfrvk5.us-east-1.elasticbeanstalk.com/client',
+                        'https://api.fgstats.com/client',
                         data=dumps({
                             'steam_id': STEAM_ID,
                             'steam_account_name': STEAM_ACCOUNT_NAME,
