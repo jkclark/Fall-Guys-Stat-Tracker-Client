@@ -1,9 +1,9 @@
 from cx_Freeze import setup, Executable
 setup(
-    name = "FGStats_Client",
-    version = "0.2.0",
+    name = 'FGStats_Client',
+    version = '0.2.0',
     options = {
-        "build_exe": {
+        'build_exe': {
             'packages': [
                 'requests',
                 'datetime',
@@ -19,5 +19,5 @@ setup(
             'include_msvcr': True,
         },
     },
-    executables = [Executable("fgstats_client.py", base="Win32GUI")]
+    executables = [Executable('fgstats_client.py', base='Win32GUI')]
 )
