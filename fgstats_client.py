@@ -1,6 +1,6 @@
 from json import dumps
 from multiprocessing import Queue
-import pathlib
+import os
 from requests import post
 from requests.exceptions import RequestException
 from time import sleep
@@ -16,8 +16,7 @@ from file_system import (
 
 # TODO: Need to handle for internet errors so that program doesn't go down
 def main():
-    # TODO: Check if windows registry contains this script already. If it doesn't, add it.
-    add_path_to_registry_startup_key(str(pathlib.Path(__file__).parent.absolute()) + r'\fgstats_client.exe' )
+    add_path_to_registry_startup_key(os.getenv('LOCALAPPDATA') + r'\FGStats_Client\fgstats_client.exe' )
 
     STEAM_ID, STEAM_ACCOUNT_NAME = get_steam_user_info()
 
