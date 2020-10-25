@@ -14,10 +14,11 @@ from file_system import (
 )
 
 
-# TODO: Need to handle for internet errors so that program doesn't go down
 def main():
-    add_path_to_registry_startup_key(os.getenv('LOCALAPPDATA') + r'\FGStats_Client\fgstats_client.exe' )
+    # NOTE: For now, we're not going to do this. Want to keep it here in case we go back to it.
+    #  add_path_to_registry_startup_key(os.getenv('LOCALAPPDATA') + r'\Programs\FGStats_Client\fgstats_client.exe')
 
+    # TODO: Add a try-catch and send to backend if we got an error here.
     STEAM_ID, STEAM_ACCOUNT_NAME = get_steam_user_info()
 
     while True:
